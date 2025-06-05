@@ -1,0 +1,3 @@
+name: enable_neural_art
+build:
+  cmake: .

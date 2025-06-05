@@ -1,0 +1,6 @@
+menuconfig ENABLE_NEURAL_ART
+	bool "Enable Neural-ART Accelerator"
+	default n
+	select USE_STM32_HAL_GPIO
+	select USE_STM32_HAL_CORTEX
+	depends on BOARD_STM32N6570_DK || BOARD_NUCLEO_N657X0_Q
