@@ -109,8 +109,16 @@ static void RISAF_Config(int flash_en, int psram_en)
  * Initialization
  ******************************************************************************/
 
+/* Note: most of what is done in this function(s) should in the midterm end up in the basic Zephyr port to STM32N6 */
 static int enable_neural_art_init(void)
 {
+  /* Enable NPU RAMs (4x448KB) */
+  RCC->MEMENR |= RCC_MEMENR_AXISRAM3EN | RCC_MEMENR_AXISRAM4EN | RCC_MEMENR_AXISRAM5EN | RCC_MEMENR_AXISRAM6EN;
+  RAMCFG_SRAM3_AXI->CR &= ~RAMCFG_CR_SRAMSD;
+  RAMCFG_SRAM4_AXI->CR &= ~RAMCFG_CR_SRAMSD;
+  RAMCFG_SRAM5_AXI->CR &= ~RAMCFG_CR_SRAMSD;
+  RAMCFG_SRAM6_AXI->CR &= ~RAMCFG_CR_SRAMSD;
+
   /* Enable Cache AXI clocks */
   __HAL_RCC_CACHEAXI_CLK_ENABLE();
   RCC->MEMENR |= RCC_MEMENR_CACHEAXIRAMEN;
@@ -120,10 +128,23 @@ static int enable_neural_art_init(void)
   __HAL_RCC_NPU_FORCE_RESET();
   __HAL_RCC_NPU_RELEASE_RESET();
 
-  /* Ensure SAU is disabled to reach optimal performance for CPU fetch in NS region (not strictly necessary) */
+  /* Enable Secure access for NPU (see Mark Trimmer) */
+  /* allow the ATON accesses to DTCM */
+  RIFSC->RIMC_ATTRx[1] = 0x310; // MCID = 1, MSEC=1, MPRIV=1
+  RIFSC->RISC_SECCFGRx[3] |= 0x00000400; // 3 x 32 + 10 = 106 // Sec conf for peripheral 10
+
+  /* Ensure SAU is disabled to reach optimal performance for CPU fetch in NS region  (not strictly necessary) */
   TZ_SAU_Disable();
 
   /* Enable Secure access for NPU (see Mark Trimmer) */
+  /** allow the ATON accesses to DTCM */
+  RIFSC->RIMC_ATTRx[1] = 0x310; // MCID = 1, MSEC=1, MPRIV=1
+  RIFSC->RISC_SECCFGRx[3] |= 0x00000400; // 3 x 32 + 10 = 106 // Sec conf for peripheral 10
+
+  /** GPU */
+  RIFSC->RIMC_ATTRx[1] = 0x310; // MCID = 1, MSEC=1, MPRIV=1
+  RIFSC->RISC_SECCFGRx[3] |= 0x00000400; // 3 x 32 + 3 = 99
+
   RISAF_Config(_FLASH_ENABLE, _PSRAM_ENABLE);
 
   /* Leave clocks enabled in Low Power mode or ATON will be gated during wfe */
